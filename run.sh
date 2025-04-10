@@ -1,23 +1,32 @@
 #!/bin/bash
 
-# Start time: December 7, 2024 at 00:00
-start_time="2025-04-03T10:20:50"
+base_date="2025-04-03T12:00:00"
+base_epoch=$(date -d "$base_date" +%s)
 
-# Convert start time to epoch seconds
-current_epoch=$(date -d "$start_time" +%s)
+FOLDER_OFFSET=$((1 * 24 * 60 * 60))  # 2 days
+FILE_OFFSET=$((5 * 60))              # 5 minutes
 
-# Loop over each file in current directory (non-recursive)
-for file in *; do
-  if [ -f "$file" ]; then
-    # Convert epoch back to formatted date
-    timestamp=$(date -d "@$current_epoch" --iso-8601=seconds)
+base_folder="./"
 
-    # Set git date environment variables
-    GIT_AUTHOR_DATE="$timestamp" GIT_COMMITTER_DATE="$timestamp" git add "$file"
-    GIT_AUTHOR_DATE="$timestamp" GIT_COMMITTER_DATE="$timestamp" git commit -m "Add $file"
+# Loop over top-level entries in f1/
+for top in "$base_folder"/*; do
+  if [ -e "$top" ]; then
+    echo "Processing $top"
+    folder_epoch=$base_epoch
 
-    # Increment time by 5 minutes (300 seconds)
-    current_epoch=$((current_epoch + 300))
+    # Find all files inside this folder (recursively)
+    files=$(find "$top" -type f | sort)
+
+    for file in $files; do
+      timestamp=$(date -d "@$folder_epoch" --iso-8601=seconds)
+
+      GIT_AUTHOR_DATE="$timestamp" GIT_COMMITTER_DATE="$timestamp" git add "$file"
+      GIT_AUTHOR_DATE="$timestamp" GIT_COMMITTER_DATE="$timestamp" git commit -m "Add $file"
+
+      folder_epoch=$((folder_epoch + FILE_OFFSET))
+    done
+
+    base_epoch=$((base_epoch + FOLDER_OFFSET))
   fi
 done
 
